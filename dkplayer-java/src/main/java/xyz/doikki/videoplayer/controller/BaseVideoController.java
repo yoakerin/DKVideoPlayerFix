@@ -95,8 +95,9 @@ public abstract class BaseVideoController extends FrameLayout
         if (getLayoutId() != 0) {
             LayoutInflater.from(getContext()).inflate(getLayoutId(), this, true);
         }
-        mOrientationHelper = new OrientationHelper(getContext().getApplicationContext());
+        //   mOrientationHelper = new OrientationHelper(getContext().getApplicationContext());
         mEnableOrientation = VideoViewManager.getConfig().mEnableOrientation;
+        setEnableOrientation(mEnableOrientation);
         mAdaptCutout = VideoViewManager.getConfig().mAdaptCutout;
 
         mShowAnim = new AlphaAnimation(0f, 1f);
@@ -124,7 +125,9 @@ public abstract class BaseVideoController extends FrameLayout
             component.attach(mControlWrapper);
         }
         //开始监听设备方向
-        mOrientationHelper.setOnOrientationChangeListener(this);
+        if (mOrientationHelper != null) {
+            mOrientationHelper.setOnOrientationChangeListener(this);
+        }
     }
 
     /**
@@ -436,14 +439,15 @@ public abstract class BaseVideoController extends FrameLayout
         if (mControlWrapper.isPlaying()
                 && (mEnableOrientation || mControlWrapper.isFullScreen())) {
             if (hasWindowFocus) {
-                postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
+                postDelayed(() -> {
+                    if (mOrientationHelper != null) {
                         mOrientationHelper.enable();
                     }
                 }, 800);
             } else {
-                mOrientationHelper.disable();
+                if (mOrientationHelper != null) {
+                    mOrientationHelper.disable();
+                }
             }
         }
     }
@@ -453,6 +457,10 @@ public abstract class BaseVideoController extends FrameLayout
      */
     public void setEnableOrientation(boolean enableOrientation) {
         mEnableOrientation = enableOrientation;
+        if (mEnableOrientation && mOrientationHelper == null) {
+            mOrientationHelper = new OrientationHelper(getContext().getApplicationContext());
+            mOrientationHelper.setOnOrientationChangeListener(this);
+        }
     }
 
     private int mOrientation = 0;
@@ -576,7 +584,9 @@ public abstract class BaseVideoController extends FrameLayout
     protected void onPlayStateChanged(int playState) {
         switch (playState) {
             case VideoView.STATE_IDLE:
-                mOrientationHelper.disable();
+                if (mOrientationHelper != null) {
+                    mOrientationHelper.disable();
+                }
                 mOrientation = 0;
                 mIsLocked = false;
                 mShowing = false;
@@ -611,9 +621,13 @@ public abstract class BaseVideoController extends FrameLayout
         switch (playerState) {
             case VideoView.PLAYER_NORMAL:
                 if (mEnableOrientation) {
-                    mOrientationHelper.enable();
+                    if (mOrientationHelper != null) {
+                        mOrientationHelper.enable();
+                    }
                 } else {
-                    mOrientationHelper.disable();
+                    if (mOrientationHelper != null) {
+                        mOrientationHelper.disable();
+                    }
                 }
                 if (hasCutout()) {
                     CutoutUtil.adaptCutoutAboveAndroidP(getContext(), false);
@@ -621,13 +635,17 @@ public abstract class BaseVideoController extends FrameLayout
                 break;
             case VideoView.PLAYER_FULL_SCREEN:
                 //在全屏时强制监听设备方向
-                mOrientationHelper.enable();
+                if (mOrientationHelper != null) {
+                    mOrientationHelper.enable();
+                }
                 if (hasCutout()) {
                     CutoutUtil.adaptCutoutAboveAndroidP(getContext(), true);
                 }
                 break;
             case VideoView.PLAYER_TINY_SCREEN:
-                mOrientationHelper.disable();
+                if (mOrientationHelper != null) {
+                    mOrientationHelper.disable();
+                }
                 break;
         }
     }
